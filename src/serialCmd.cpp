@@ -4,7 +4,7 @@
 // @project     NanoPWM
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-27
-// @modifiedby  GiorgioCC - 2023-08-28 12:42
+// @modifiedby  GiorgioCC - 2023-08-28 16:40
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -34,9 +34,10 @@ inline void resetCmd(void)
 
 bool isCommandReady(uint8_t nChars, bool checkCh = true) {
     if(ci != nChars) return false;
-    bool res;
+    bool res = true;
     if(checkCh) {
         if(!(res = isChannelOK(msgBuf[1]))) {
+            // Wrong channel aborts command
             resetCmd();
         }
     }
@@ -58,7 +59,7 @@ void tryCommand(void)
 {
     char    cmd = msgBuf[0];
     uint8_t chn = msgBuf[1]-'0';
-    bool    creset = false;
+    bool    cmdDone = false;
 
     switch(cmd) {
         // case 'v':
@@ -71,7 +72,7 @@ void tryCommand(void)
                 v += times10((uint8_t)(msgBuf[3]-'0'));
                 v += times100((uint8_t)(msgBuf[2]-'0'));
                 chan[chn].setPWM(v);
-                creset = true;
+                cmdDone = true;
             }
         }
         break;
@@ -83,7 +84,7 @@ void tryCommand(void)
             // (effective at next loop)
             if(isCommandReady(2)) {
                 chan[chn].internal = true;
-                creset = true;
+                cmdDone = true;
             }
         }
         break;
@@ -94,7 +95,7 @@ void tryCommand(void)
             // "Rn"/"rn"- Reverse PWM On/Off
             if(isCommandReady(2)) {
                 chan[chn].reverse = (cmd == 'R');
-                creset = true;
+                cmdDone = true;
             }
         }
         break;
@@ -105,7 +106,7 @@ void tryCommand(void)
             // "Cn"/"cn"- Correct PWM for CIE LED brightness On/Off
             if(isCommandReady(2)) {
                 chan[chn].LEDcorrect = (cmd == 'C');
-                creset = true;
+                cmdDone = true;
             }
         }
         break;
@@ -115,7 +116,7 @@ void tryCommand(void)
         {
             // "s"/"S"- Save current params
             saveParams();
-            creset = true;
+            cmdDone = true;
         }
         break;
 
@@ -124,7 +125,29 @@ void tryCommand(void)
         {
             // "x"/"X"- Discard changes, revert to last saved configuration
             fetchParams();
-            creset = true;
+            cmdDone = true;
+        }
+        break;
+
+        case 'o':
+        case 'O':
+        {
+            // "on"/"On"- Single channel <o>ff/<O>n
+            if(isCommandReady(2)) {
+                chan[chn].inhibit = (cmd == 'o');
+                cmdDone = true;
+            }           
+        }
+        break;
+
+        case 'a':
+        case 'A':
+        {
+            // "a"/"A"- All channels channel off/on
+            for(uint8_t i = 0; i < MAX_CH; i++) {
+                chan[chn].inhibit = (cmd == 'a');
+            }           
+            cmdDone = true;
         }
         break;
 
@@ -132,7 +155,10 @@ void tryCommand(void)
         break;
 
     }
-    if(creset) resetCmd();
+    if(cmdDone) {
+        resetCmd();
+        Serial.println("OK");
+    }
 }
 
 

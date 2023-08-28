@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-08-28 14:21
+// @modifiedby  GiorgioCC - 2023-08-28 16:40
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -36,6 +36,7 @@ public:
     bool        internal;
     bool        reverse;
     bool        LEDcorrect;
+    bool        inhibit;
 
     static constexpr uint8_t accSize = 3;
     static constexpr uint8_t cfgSize =

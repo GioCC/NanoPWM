@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-08-28 14:53
+// @modifiedby  GiorgioCC - 2023-08-28 16:40
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -42,7 +42,8 @@ pack(uint8_t* dst)
     uint8_t flags;
     if(LEDcorrect) flags |= 0x01; 
     if(reverse)    flags |= 0x02; 
-    if(internal)   flags |= 0x04; 
+    if(internal)   flags |= 0x04;
+    if(inhibit)    flags |= 0x08;
     // *dst++ = ADCpin;    // Unused here: fixed value
     // *dst++ = PWMpin;    // Unused here: fixed value
     // *dst++ = PWMval;    // Unused here: not saved
@@ -61,6 +62,7 @@ unpack(uint8_t* src)
     LEDcorrect = ((flags & 0x01) != 0); 
     reverse    = ((flags & 0x02) != 0); 
     internal   = ((flags & 0x04) != 0); 
+    inhibit    = ((flags & 0x08) != 0); 
 }
 
 void Channel::
@@ -79,12 +81,11 @@ fetchInVal(void)
     uint16_t aval = analogRead(ADCpin);
     uint8_t  res  = 0;
     
+    // Always read ADC anyway, even if value is forced from Serial
     // acc.addVal(aval);
     filter.Filter(aval);
     res = ADCval();
-    // if(true | (acc.ready() && internal)) {
-    //     PWMval = res;
-    // }
+
     // if(acc.ready()) {
     if(internal) PWMval = res;
     // }
@@ -94,7 +95,7 @@ fetchInVal(void)
 void  Channel::
 setPWM(uint8_t val)
 {   
-    PWMval = val;
+    PWMval = (inhibit ? 0 : val);
     if(LEDcorrect) val = PWMtables::TAB_CIE_8[val];
     if(reverse) val = (255-val);
     analogWrite(PWMpin, val);
