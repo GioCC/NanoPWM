@@ -4,7 +4,7 @@
 // @details     Simple EEPROM config storage manager
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-26
-// @modifiedby  GiorgioCC - 2023-08-26 12:36
+// @modifiedby  GiorgioCC - 2023-08-28 13:05
 //
 // Copyright (c) 2023 GiorgioCC
 
@@ -13,7 +13,6 @@
 #define __EECONFIG__H__
 
 #include <stdint.h>
-#include <EEPROM.h>
 
 class EEconfig
 {
@@ -44,8 +43,8 @@ public:
     void    init(uint16_t CfgSize, uint16_t EESize, uint16_t EEStart = 0);
     bool    isInited(void) { return (size != 0); }
 
-    uint8_t cfgWrite(uint8_t *CfgData);
-    uint8_t cfgRead(uint8_t *CfgData);
+    uint8_t write(uint8_t *CfgData);
+    uint8_t read(uint8_t *CfgData);
 
 };
 
