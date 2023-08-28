@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-08-28 12:40
+// @modifiedby  GiorgioCC - 2023-08-28 14:53
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -23,7 +23,8 @@ unsigned long lastPoll = 0;
 Channel     chan[MAX_CH];
 EEconfig    cfgStore;
 
-constexpr uint8_t cfgBlockSize = MAX_CH * Channel::cfgSize;
+constexpr uint8_t CfgBlockSize = MAX_CH * Channel::cfgSize;
+constexpr uint8_t ExpWeight = 30;
 
 
 // =================================
@@ -67,7 +68,8 @@ set(uint8_t Apin, uint8_t Ppin)
 {
     ADCpin = Apin;
     PWMpin = Ppin;
-    acc.setLength(accSize);
+    // acc.setLength(accSize);
+    filter.SetWeight(ExpWeight);
     pinMode(Apin, INPUT); 
 }
 
@@ -77,11 +79,15 @@ fetchInVal(void)
     uint16_t aval = analogRead(ADCpin);
     uint8_t  res  = 0;
     
-    acc.addVal(aval);
+    // acc.addVal(aval);
+    filter.Filter(aval);
     res = ADCval();
-    if(true | (acc.ready() && internal)) {
-        PWMval = res;
-    }
+    // if(true | (acc.ready() && internal)) {
+    //     PWMval = res;
+    // }
+    // if(acc.ready()) {
+    if(internal) PWMval = res;
+    // }
     return res;
 }
 
@@ -100,7 +106,7 @@ setPWM(uint8_t val)
 
 void saveParams()
 {
-    uint8_t buf[cfgBlockSize];
+    uint8_t buf[CfgBlockSize];
     uint8_t* dst = buf;
 
     for(uint8_t i = 0; i < MAX_CH; i++) {
@@ -113,7 +119,7 @@ void saveParams()
 
 void fetchParams()
 {
-    uint8_t buf[cfgBlockSize];
+    uint8_t buf[CfgBlockSize];
     uint8_t* src = buf;
     
     cfgStore.read(buf);
@@ -142,7 +148,7 @@ void setup() {
     chan[4].set(A4, 10);
     chan[5].set(A5, 11);
 #endif
-    cfgStore.init(cfgBlockSize, 128);
+    cfgStore.init(CfgBlockSize, 128);
     fetchParams();
 }
 

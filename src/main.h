@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-08-28 12:40
+// @modifiedby  GiorgioCC - 2023-08-28 14:21
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -16,9 +16,10 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <avr\pgmspace.h>
-#include "average_acc.h"
 #include "PWMtables.h"
-#include "EEconfig.h"
+#include <average_acc.h>
+#include <EEconfig.h>
+#include <ExpFilter.h>
 
 #define PIN_LED 1
 #define PIN_PWM 1
@@ -30,7 +31,8 @@ public:
     uint8_t     ADCpin;
     uint8_t     PWMpin;
     uint8_t     PWMval;
-    AverageAcc  acc;
+    // AverageAcc  acc;
+    ExpFilter<int> filter;
     bool        internal;
     bool        reverse;
     bool        LEDcorrect;
@@ -40,7 +42,9 @@ public:
     /* sizeof(ADCpin)+sizeof(PWMpin)+sizeof(PWMval)+ */ 1;
     
     Channel(void);
-    uint8_t     ADCval(void) { return ((acc.average() + 2) >> 2); }
+    uint8_t     ADCval(void) 
+        // { return ((acc.average() + 2) >> 2); }
+        { return ((filter.Current() + 2) >> 2); }
     void        set(uint8_t Apin, uint8_t Ppin);
     uint8_t     fetchInVal(void);
     void        setPWM(uint8_t val);

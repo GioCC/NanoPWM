@@ -41,7 +41,7 @@ public:
     AverageAcc(void);
     explicit AverageAcc(uint8_t);
 
-    void setLength(uint8_t);
+    void        setLength(uint8_t);
 
     /// Return true if an accumulator has enough data for a sensible value
     bool        ready(void)   { return (count >= (uint16_t)(1<<(length_l2-1))); }
