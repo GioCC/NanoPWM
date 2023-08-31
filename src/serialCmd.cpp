@@ -4,7 +4,7 @@
 // @project     NanoPWM
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-27
-// @modifiedby  GiorgioCC - 2023-08-31 14:24
+// @modifiedby  GiorgioCC - 2023-08-31 17:51
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -65,10 +65,11 @@ void printHelp(void)
         Serial.println(F("Rn/rn - Reverse PWM On/Off"));
         Serial.println(F("Cn/cn - Correct PWM for CIE LED brightness On/Off"));
         Serial.println(F("s/S   - Save current params"));
-        Serial.println(F("x/X   - Discard changes, revert to last saved configuration"));
+        Serial.println(F("x     - Discard changes, revert to last saved configuration"));
+        Serial.println(F("X     - Reset all params to factory defaults"));
         Serial.println(F("on/On - Single channel <o>ff/<O>n"));
-        Serial.println(F("a/A   - All channels channel off/on"));
-        Serial.println(F("p/P   - Report current channel setpoint"));
+        Serial.println(F("a/A   - All channels off/on"));
+        Serial.println(F("p/P   - Report current channel setpoint / parameters"));
         Serial.println(F("h/H   - Print command help"));
 }
 
@@ -139,10 +140,17 @@ void tryCommand(void)
         break;
 
         case 'x':
+        {
+            // "x"- Discard changes, revert to last saved configuration
+            fetchParams();
+            cmdDone = true;
+        }
+        break;
+
         case 'X':
         {
-            // "x"/"X"- Discard changes, revert to last saved configuration
-            fetchParams();
+            // "X"- Reset to factory defaults
+            resetParams();
             cmdDone = true;
         }
         break;
@@ -170,9 +178,8 @@ void tryCommand(void)
         break;
 
         case 'p':
-        case 'P':
         {
-            // "p"/"P"- Report current channel values
+            // "p" - Report current channel values
             // Reports setpoint value; does not report 0 if inhibited
             for(uint8_t i = 0; i < MAX_CH; i++) {
                 Serial.print("Ch");
@@ -184,18 +191,38 @@ void tryCommand(void)
         }
         break;
 
+        case 'P':
+        {
+            // "P" - Report current channel parameters
+            Serial.println(F("Active/Internal/Reverse/Corrected"));
+            for(uint8_t i = 0; i < MAX_CH; i++) {
+                Serial.print(i);
+                Serial.print(chan[i].inhibit ? ": - " : ": A ");
+                Serial.print(chan[i].internal ? "I " : "- ");
+                Serial.print(chan[i].reverse ? "R " : "- ");
+                Serial.println(chan[i].LEDcorrect ? "C" : "-");
+            }           
+            cmdDone = true;
+        }
+        break;
+
         case 'h':
         case 'H':
         {
             // "h"/"H"- Print command help
             printHelp();
+            cmd = ' ';  // Don't print "h" twice
             cmdDone = true;
         }
         break;
 
         default: 
-            Serial.print(cmd);
-            Serial.println(" ?");
+            if(cmd != '\n' && cmd != '\r') {
+                Serial.print(cmd);
+                Serial.println(" ?");
+            } else {
+                resetCmd();
+            }
         break;
 
     }

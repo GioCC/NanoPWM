@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-08-30 14:15
+// @modifiedby  GiorgioCC - 2023-08-31 17:53
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -85,6 +85,7 @@ fetchInVal(void)
     // acc.addVal(aval);
     filter.Filter(aval);
     res = ADCval();
+    res = (aval+2) >> 2; //DEBUG
     return res;
 }
 
@@ -93,8 +94,8 @@ setPWM(uint8_t val)
 {   
     PWMval = val;
     val = (inhibit ? 0 : val);
-    if(LEDcorrect) val = PWMtables::TAB_CIE_8[val];
-    if(reverse) val = (255-val);
+    // if(LEDcorrect) val = PWMtables::TAB_CIE_8[val];
+    // if(reverse) val = (255-val);
     analogWrite(PWMpin, val);
 }
 
@@ -102,7 +103,7 @@ setPWM(uint8_t val)
 //  Main functions
 // ===============================
 
-void saveParams()
+void saveParams(void)
 {
     uint8_t buf[CfgBlockSize];
     uint8_t* dst = buf;
@@ -115,7 +116,7 @@ void saveParams()
     cfgStore.write(buf);
 }
 
-void fetchParams()
+void fetchParams(void)
 {
     uint8_t buf[CfgBlockSize];
     uint8_t* src = buf;
@@ -126,6 +127,17 @@ void fetchParams()
         chan[i].unpack(src);
         src += Channel::cfgSize;
     }
+}
+
+void resetParams(void)
+{
+    for(uint8_t i = 0; i < MAX_CH; i++) {
+        chan[i].inhibit = false;
+        chan[i].internal = true;
+        chan[i].LEDcorrect = true;
+        chan[i].reverse = false;
+   }
+   saveParams();
 }
 
 // void TESTsetup() {

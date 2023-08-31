@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-08-28 16:40
+// @modifiedby  GiorgioCC - 2023-08-31 17:23
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -53,7 +53,7 @@ public:
     void        unpack(uint8_t* src);
 };
 
-#ifndef PROMINI
+#ifdef PROMINI
 constexpr uint8_t MAX_CH = 4;
 #else 
 constexpr uint8_t MAX_CH = 6;
@@ -68,6 +68,7 @@ extern EEconfig cfgStore;
 
 void    saveParams(void);
 void    fetchParams(void);
+void    resetParams(void);
 
 // void    processCmd(void);
 
