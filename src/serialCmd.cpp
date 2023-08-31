@@ -4,7 +4,7 @@
 // @project     NanoPWM
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-27
-// @modifiedby  GiorgioCC - 2023-08-31 17:51
+// @modifiedby  GiorgioCC - 2023-08-31 21:04
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -71,6 +71,15 @@ void printHelp(void)
         Serial.println(F("a/A   - All channels off/on"));
         Serial.println(F("p/P   - Report current channel setpoint / parameters"));
         Serial.println(F("h/H   - Print command help"));
+}
+
+void printAllValues(void)
+{
+    for(uint8_t i = 0; i < MAX_CH; i++) {
+        Serial.print(chan[i].PWMval);
+        Serial.print(" ");
+    }           
+    Serial.println();
 }
 
 void tryCommand(void)

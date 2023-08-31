@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-08-31 17:53
+// @modifiedby  GiorgioCC - 2023-08-31 22:11
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -19,6 +19,7 @@ int dlyf = DELAY_MS/4;
 
 unsigned long now = 0;
 unsigned long lastPoll = 0;
+unsigned long last_1s = 0;
 
 Channel     chan[MAX_CH];
 EEconfig    cfgStore;
@@ -79,14 +80,16 @@ uint8_t Channel::
 fetchInVal(void)
 {
     uint16_t aval = analogRead(ADCpin);
-    uint8_t  res  = 0;
+    uint16_t res  = 0;
     
     // Always read ADC anyway, even if value is forced from Serial
     // acc.addVal(aval);
     filter.Filter(aval);
     res = ADCval();
+    
     res = (aval+2) >> 2; //DEBUG
-    return res;
+    if(res > 255) res = 255;
+    return (uint8_t)res;
 }
 
 void  Channel::
@@ -94,9 +97,23 @@ setPWM(uint8_t val)
 {   
     PWMval = val;
     val = (inhibit ? 0 : val);
-    // if(LEDcorrect) val = PWMtables::TAB_CIE_8[val];
-    // if(reverse) val = (255-val);
-    analogWrite(PWMpin, val);
+    
+    // BEWARE: "Reverse" should only be used to setup a low-side LED drive, NOT to
+    // make up for an inverted connection of the control potentiometer.
+    // If "Reverse" is applied to an LED driven high-side (or the other way around), 
+    // applying "LEDcorrect" does not only fail to improve the brightness progression,
+    // but it actually makes it worse!
+
+    if(LEDcorrect) val = pgm_read_byte(PWMtables::TAB_CIE_8 + val);
+    if(reverse) val = (255-val);
+    if(val == 0) {
+        digitalWrite(PWMpin, 0);
+    } else
+    if(val == 255) {
+        digitalWrite(PWMpin, 1);
+    } else {
+        analogWrite(PWMpin, val);
+    }
 }
 
 // ===============================
@@ -149,7 +166,7 @@ void resetParams(void)
 void setup() {
     // TESTsetup();
     Serial.begin(19200);
-    delay(5000);
+    //delay(1000);
     chan[0].set(A0, 3);
     chan[1].set(A1, 5);
     chan[2].set(A2, 6);
@@ -177,6 +194,11 @@ void loop() {
             chan[nc].setPWM(v);
         }
         if(++nc >= MAX_CH) nc = 0;
+    }
+    if((now - last_1s) > 2000) {
+        last_1s = now;
+        //Serial.println("Tick.");
+        //printAllValues();
     }
     processCmds(now);
 }

@@ -4,7 +4,7 @@
 // @project     NanoPWM
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-27
-// @modifiedby  GiorgioCC - 2023-08-27 19:27
+// @modifiedby  GiorgioCC - 2023-08-31 21:04
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -15,5 +15,7 @@
 #include "main.h"
 
 void processCmds(unsigned long now);
+
+void printAllValues(void);
 
 #endif  //!__SERIALCMD__H__
