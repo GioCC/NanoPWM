@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-08-28 16:40
+// @modifiedby  GiorgioCC - 2023-08-30 14:15
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -85,17 +85,14 @@ fetchInVal(void)
     // acc.addVal(aval);
     filter.Filter(aval);
     res = ADCval();
-
-    // if(acc.ready()) {
-    if(internal) PWMval = res;
-    // }
     return res;
 }
 
 void  Channel::
 setPWM(uint8_t val)
 {   
-    PWMval = (inhibit ? 0 : val);
+    PWMval = val;
+    val = (inhibit ? 0 : val);
     if(LEDcorrect) val = PWMtables::TAB_CIE_8[val];
     if(reverse) val = (255-val);
     analogWrite(PWMpin, val);
