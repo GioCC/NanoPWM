@@ -4,7 +4,7 @@
 // @project     NanoPWM
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-27
-// @modifiedby  GiorgioCC - 2023-09-01 18:03
+// @modifiedby  GiorgioCC - 2023-09-01 19:33
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -87,6 +87,29 @@ void printAllValues(void)
         Serial.print(" ");
     }           
     Serial.println();
+}
+
+void printEEpromContent(uint16_t start, uint8_t nvals) 
+{
+    Serial.print("Base "); 
+    Serial.print(cfgStore.getBase()); 
+    Serial.print(" / Pos "); 
+    Serial.println(cfgStore.getCurrPos()); 
+
+    uint8_t  n = 0;
+    char     hbuf[12];
+
+    while(1) {
+        sprintf(hbuf, "%02X ", cfgStore.getByte(start + n++));
+        Serial.print(hbuf);
+        if(--nvals == 0) {
+            Serial.println();
+            break;
+        }
+        if((n & 0x0F) == 0) {
+            Serial.println();
+        }
+    }
 }
 
 void tryCommand(void)
@@ -267,28 +290,8 @@ void tryCommand(void)
                 uint8_t v = (uint8_t)(msgBuf[3]-'0');
                 v += times10((uint8_t)(msgBuf[2]-'0'));
                 v += times100((uint8_t)(msgBuf[1]-'0'));
-                
-                Serial.print("Base "); 
-                Serial.print(cfgStore.getBase()); 
-                Serial.print(" / Pos "); 
-                Serial.println(cfgStore.getCurrPos()); 
-
                 uint16_t pos = (cmd == 'y' ? cfgStore.getCurrPos() : cfgStore.getBase());
-                uint8_t  n = 0;
-                char     hbuf[12];
-
-                while(1) {
-                    sprintf(hbuf, "%02X ", cfgStore.getByte(pos + n++));
-                    Serial.print(hbuf);
-                    if(--v == 0) {
-                        Serial.println();
-                        break;
-                    }
-                    if((n & 0x0F) == 0) {
-                        Serial.println();
-                    }
-                }
-                
+                printEEpromContent(pos, v);
                 cmdDone = true;
             }
         }
@@ -298,6 +301,7 @@ void tryCommand(void)
         {
             // "Z" - Reset (zero out) EEPROM
             cfgStore.erase();
+            printEEpromContent(0, 64);
             cmdDone = true;
         }
         break;
