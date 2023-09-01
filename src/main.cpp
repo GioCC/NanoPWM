@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-08-31 22:11
+// @modifiedby  GiorgioCC - 2023-09-01 17:29
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -40,30 +40,33 @@ internal(true), reverse(false), LEDcorrect(true)
 uint8_t Channel::
 pack(uint8_t* dst)
 {
-    uint8_t flags;
+    uint8_t flags = 0;
+    uint8_t n = 0;
     if(LEDcorrect) flags |= 0x01; 
     if(reverse)    flags |= 0x02; 
     if(internal)   flags |= 0x04;
-    if(inhibit)    flags |= 0x08;
+    if(active)     flags |= 0x08;
     // *dst++ = ADCpin;    // Unused here: fixed value
     // *dst++ = PWMpin;    // Unused here: fixed value
     // *dst++ = PWMval;    // Unused here: not saved
-    *dst++ = flags;
-    return cfgSize;
+    *dst++ = flags; n++;
+    return n; // MUST be equal to cfgSize!
 }
 
-void Channel::
+uint8_t Channel::
 unpack(uint8_t* src)
 {
     uint8_t flags;
+    uint8_t n = 0;
     // ADCpin = *src++;  // Unused here: fixed value
     // PWMpin = *src++;  // Unused here: fixed value
     // PWMval = *src++;  // Unused here: not saved
-    flags  = *src++;
+    flags  = *src++; n++;
     LEDcorrect = ((flags & 0x01) != 0); 
     reverse    = ((flags & 0x02) != 0); 
     internal   = ((flags & 0x04) != 0); 
-    inhibit    = ((flags & 0x08) != 0); 
+    active     = ((flags & 0x08) != 0); 
+    return n; // MUST be equal to cfgSize!
 }
 
 void Channel::
@@ -96,7 +99,7 @@ void  Channel::
 setPWM(uint8_t val)
 {   
     PWMval = val;
-    val = (inhibit ? 0 : val);
+    if(!active) val = 0;
     
     // BEWARE: "Reverse" should only be used to setup a low-side LED drive, NOT to
     // make up for an inverted connection of the control potentiometer.
@@ -126,8 +129,7 @@ void saveParams(void)
     uint8_t* dst = buf;
 
     for(uint8_t i = 0; i < MAX_CH; i++) {
-        chan[i].pack(dst);
-        dst += Channel::cfgSize;
+        dst += chan[i].pack(dst);
     }
     
     cfgStore.write(buf);
@@ -138,21 +140,25 @@ void fetchParams(void)
     uint8_t buf[CfgBlockSize];
     uint8_t* src = buf;
     
-    cfgStore.read(buf);
+    if(cfgStore.isValid()) {
+        cfgStore.read(buf);
 
-    for(uint8_t i = 0; i < MAX_CH; i++) {
-        chan[i].unpack(src);
-        src += Channel::cfgSize;
+        for(uint8_t i = 0; i < MAX_CH; i++) {
+            chan[i].unpack(src);
+            src += Channel::cfgSize;
+        }
+    } else {
+        resetParams();
     }
 }
 
 void resetParams(void)
 {
     for(uint8_t i = 0; i < MAX_CH; i++) {
-        chan[i].inhibit = false;
-        chan[i].internal = true;
-        chan[i].LEDcorrect = true;
-        chan[i].reverse = false;
+        chan[i].active      = true;
+        chan[i].internal    = true;
+        chan[i].reverse     = false;
+        chan[i].LEDcorrect  = true;
    }
    saveParams();
 }
@@ -202,6 +208,3 @@ void loop() {
     }
     processCmds(now);
 }
-
-
-
