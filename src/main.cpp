@@ -5,10 +5,15 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F     
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-09-01 17:29
+// @modifiedby  GiorgioCC - 2023-09-14 12:54
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
+
+// TODO: (@2023-09-14)
+// - Serial command for "Factory reset"
+// - HW factory reset for jumper at boot on D12 (Nano) / D10 (ProMicro)
+// - Test input filter
 
 #include "main.h"
 #include "serialCmd.h"
