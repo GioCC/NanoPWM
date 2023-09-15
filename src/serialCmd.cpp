@@ -4,7 +4,7 @@
 // @project     NanoPWM
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-27
-// @modifiedby  GiorgioCC - 2023-09-01 19:33
+// @modifiedby  GiorgioCC - 2023-09-14 15:41
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -70,8 +70,8 @@ void printHelp(void)
         Serial.println(F("Cn/cn - Correct PWM for CIE LED brightness On/Off"));
         Serial.println(F("nAIRC - Set flags for ch. #n: A/a, I/i, R/r, C/c"));
         Serial.println(F("s/S   - Save current params"));
-        Serial.println(F("x     - Discard changes, revert to last saved configuration"));
-        Serial.println(F("X     - Reset all params to factory defaults"));
+        Serial.println(F("x/X   - Discard changes, revert to last saved configuration"));
+        Serial.println(F("F     - Reset all params to factory defaults"));
         Serial.println(F("p/P   - Report current channel setpoint / parameters"));
         Serial.println(F("h/H   - Print command help"));
         Serial.println(F("> DEBUG:"));
@@ -223,16 +223,17 @@ void tryCommand(void)
         break;
 
         case 'x':
+        case 'X':
         {
-            // "x"- Discard changes, revert to last saved configuration
+            // "x/X"- Discard changes, revert to last saved configuration
             fetchParams();
             cmdDone = true;
         }
         break;
 
-        case 'X':
+        case 'F':
         {
-            // "X"- Reset to factory defaults
+            // "F"- Reset to factory defaults
             resetParams();
             cmdDone = true;
         }

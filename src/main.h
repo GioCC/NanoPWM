@@ -2,10 +2,10 @@
 // @file        main.h
 //
 // @project     NanoPWM
-// @details     Pot controlled PWM brightness regulator with serial I/F     
+// @details     Pot controlled PWM brightness regulator with serial I/F
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-09-01 17:29
+// @modifiedby  GiorgioCC - 2023-09-15 10:46
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -15,63 +15,32 @@
 
 #include <Arduino.h>
 #include <stdint.h>
-#include <avr\pgmspace.h>
-#include "PWMtables.h"
-#include <average_acc.h>
+// #include <avr\pgmspace.h>
+// #include "PWMtables.h"
+// #include <average_acc.h>
+// #include <ExpFilter.h>
 #include <EEconfig.h>
-#include <ExpFilter.h>
+#include "channel.h"
 
 #define PIN_LED 1
 #define PIN_PWM 1
 #define PIN_ANA 2
 
-class Channel {
-public:
-
-    uint8_t     ADCpin;
-    uint8_t     PWMpin;
-    uint8_t     PWMval;
-    // AverageAcc  acc;
-    ExpFilter<int> filter;
-    bool        internal;
-    bool        reverse;
-    bool        LEDcorrect;
-    bool        active;
-
-    static constexpr uint8_t accSize = 3;
-    static constexpr uint8_t cfgSize =
-    /* sizeof(ADCpin)+sizeof(PWMpin)+sizeof(PWMval)+ */ 1;
-    
-    Channel(void);
-    uint8_t     ADCval(void) 
-        // { return ((acc.average() + 2) >> 2); }
-        { return ((filter.Current() + 2) >> 2); }
-    void        set(uint8_t Apin, uint8_t Ppin);
-    uint8_t     fetchInVal(void);
-    void        setPWM(uint8_t val);
-    uint8_t     pack(uint8_t* dst);
-    uint8_t     unpack(uint8_t* src);
-};
-
 #ifdef PROMINI
 constexpr uint8_t MAX_CH = 4;
-#else 
+#else
 constexpr uint8_t MAX_CH = 6;
 #endif
 
-extern Channel chan[MAX_CH];
-
+extern Channel  chan[MAX_CH];
 extern EEconfig cfgStore;
 
 // uint8_t fetchInVal(uint8_t nCh);
 // void    setPWM(uint8_t nCh, uint8_t val);
-
-void    saveParams(void);
-void    fetchParams(void);
-void    resetParams(void);
-
 // void    processCmd(void);
 
-#endif  //!__MAIN__H__
+void            saveParams(void);
+void            fetchParams(void);
+void            resetParams(void);
 
-
+#endif //!__MAIN__H__
