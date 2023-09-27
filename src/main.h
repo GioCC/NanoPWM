@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-09-15 10:46
+// @modifiedby  GiorgioCC - 2023-09-27 11:54
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -22,9 +22,9 @@
 #include <EEconfig.h>
 #include "channel.h"
 
-#define PIN_LED 1
-#define PIN_PWM 1
-#define PIN_ANA 2
+// #define PIN_LED 1
+// #define PIN_PWM 1
+// #define PIN_ANA 2
 
 #ifdef PROMINI
 constexpr uint8_t MAX_CH = 4;

@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-09-15 10:46
+// @modifiedby  GiorgioCC - 2023-09-27 12:08
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -15,6 +15,13 @@
 
 #include "main.h"
 #include "serialCmd.h"
+
+#define UART_BAUD       19200
+
+#ifdef  USE_I2C
+#define I2C_ADDRESS     0x01
+#endif
+
 
 #define DELAY_MS 1024
 int               dly  = DELAY_MS;
@@ -33,7 +40,7 @@ constexpr uint8_t CfgBlockSize = MAX_CH * Channel::cfgSize;
 //  Main functions
 // ===============================
 
-void              saveParams(void)
+void saveParams(void)
 {
     uint8_t  buf[CfgBlockSize];
     uint8_t *dst = buf;
@@ -91,6 +98,19 @@ bool checkParamReset(void)
     return pinVal;
 }
 
+#ifdef  USE_I2C
+void onI2Crequest(void) 
+{
+    while(Wire.available()) {
+        char c = Wire.read(); // receive byte as a character
+        //int x = Wire.read();    // receive byte as an integer
+
+        //! TODO ........
+    }
+}
+#endif
+
+
 // void TESTsetup() {
 // }
 
@@ -100,16 +120,42 @@ bool checkParamReset(void)
 void setup()
 {
     // TESTsetup();
-    Serial.begin(19200);
+    Serial.begin(UART_BAUD);
+
+#ifdef  USE_I2C
+    Wire.begin(I2C_ADDRESS);
+    Wire.onRequest(onI2Crequest);
+#endif
+
     // delay(1000);
+#ifdef  HW_V1
+    // Hardware v1.x
     chan[0].set(A0, 3);
     chan[1].set(A1, 5);
     chan[2].set(A2, 6);
     chan[3].set(A3, 9);
-#ifndef PROMINI
+    #ifndef PROMINI
     chan[4].set(A4, 10);
     chan[5].set(A5, 11);
-#endif
+    #endif
+#else
+    // Hardware v2.x
+    #ifndef PROMINI
+    chan[0].set(A0, 3);
+    chan[1].set(A1, 5);
+    chan[2].set(A2, 6);
+    chan[3].set(A3, 9);
+    chan[4].set(A6, 10);
+    chan[5].set(A7, 11);
+    #else
+    chan[0].set(A0, 5);
+    chan[1].set(A1, 6);
+    chan[2].set(A2, 9);
+    chan[3].set(A3, 10);
+    #endif
+#endif  //HW_V1
+
+
     cfgStore.init(CfgBlockSize, 128);
     if (!checkParamReset()) fetchParams();
 }
@@ -125,7 +171,7 @@ void loop()
         lastPoll = now;
         // Update next channel after 2 ms
         // (Channel update rate 2ms*4/6 = 8/12ms)
-        v        = chan[nc].fetchInVal();
+        v  = chan[nc].fetchInVal();
         if (chan[nc].internal) {
             chan[nc].setPWM(v);
         }
