@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-09-27 11:54
+// @modifiedby  GiorgioCC - 2023-10-09 17:02
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -36,7 +36,7 @@ extern Channel  chan[MAX_CH];
 extern EEconfig cfgStore;
 
 // uint8_t fetchInVal(uint8_t nCh);
-// void    setPWM(uint8_t nCh, uint8_t val);
+// void    setVal(uint8_t nCh, uint8_t val);
 // void    processCmd(void);
 
 void            saveParams(void);

@@ -4,7 +4,7 @@
 // @project     NanoPWM
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-27
-// @modifiedby  GiorgioCC - 2023-09-14 15:41
+// @modifiedby  GiorgioCC - 2023-10-09 17:08
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -129,7 +129,7 @@ void tryCommand(void)
                     uint8_t v = (uint8_t)(msgBuf[4]-'0');
                     v += times10((uint8_t)(msgBuf[3]-'0'));
                     v += times100((uint8_t)(msgBuf[2]-'0'));
-                    chan[chn].setPWM(v);
+                    chan[chn].setVal(v);
                 }
                 cmdDone = true;
             }
@@ -327,14 +327,13 @@ void tryCommand(void)
 
 void processCmds(unsigned long now)
 {
-    char c; 
     if(!Serial.available()) {
         if((now - lastCharTS) > MsgTimeout) ci = 0;
         return;
     }
     lastCharTS = now;
     while(Serial.available()) {
-        c = (char)Serial.read();
+        char c = (char)Serial.read();
         if(c == '#') {
             ci = 0;
         } else 

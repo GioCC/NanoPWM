@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-09-27 12:08
+// @modifiedby  GiorgioCC - 2023-10-09 17:07
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -18,10 +18,12 @@
 
 #define UART_BAUD       19200
 
+//#define USE_I2C
+
 #ifdef  USE_I2C
+#include <Wire.h>
 #define I2C_ADDRESS     0x01
 #endif
-
 
 #define DELAY_MS 1024
 int               dly  = DELAY_MS;
@@ -36,6 +38,86 @@ EEconfig          cfgStore;
 
 constexpr uint8_t CfgBlockSize = MAX_CH * Channel::cfgSize;
 
+#ifdef  USE_I2C
+volatile bool     I2CReqPending = false;
+#endif
+
+// ===============================
+//  Demo functions
+// ===============================
+
+// "Plays" a ramp (0->100%->0) on the channels specified in <pattern>
+//  Returns 0 when finished, or 1 if interrupted by a serial or I2C message
+// (whether valid or not).
+
+constexpr uint8_t RAMP_DLY = 16;
+
+static
+uint8_t demo_stepChannel(uint8_t pattern) 
+{
+    uint8_t res = 0;
+    uint8_t m   = 0x01;
+    uint8_t bakVals[MAX_CH];
+
+    if(Serial.available()) return 1;
+#ifdef  USE_I2C
+    if(I2CReqPending) return 1;
+#endif
+
+    // Save (all) current channel values and start relevant ones from 0
+    for(uint8_t ch = 0; ch<MAX_CH; ch++, m <<= 1) {
+        if(!(pattern & m)) continue;
+        bakVals[ch] = chan[ch].getVal();
+        chan[ch].setVal(0);
+    }
+
+    // Ramp all involved channels
+    for(uint16_t dt = 0; (dt < 512) && (res == 0); dt++) {
+        uint8_t v = dt & 0xFF;
+        if(dt > 255) v = 255-v; 
+        m = 0x01;
+        for(uint8_t ch = 0; ch<MAX_CH; ch++, m <<= 1) {
+            if(pattern & m) chan[ch].setVal(v);
+        }
+
+        // Check exit conditions
+        if(Serial.available())  res = 1;
+#ifdef  USE_I2C
+        if(I2CReqPending)  res = 1;
+#endif
+
+        // Speed delay
+        delay(RAMP_DLY); 
+    }
+
+    // Restore channel values (modified only)
+    m = 0x01;
+    for(uint8_t ch = 0; ch<MAX_CH; ch++, m <<= 1) {
+        if(!(pattern & m)) continue;
+        chan[ch].setVal(bakVals[ch]);
+    }
+    
+    return res;
+}
+
+static
+void demo_stepAll(bool repeat) 
+{
+    while((demo_stepChannel(0xFF) == 0) && repeat);
+}
+
+static
+void demo_stepSeq(bool repeat) 
+{
+    uint8_t res = 0;
+    do {
+        for(uint8_t i = 0; (i < MAX_CH) && (res == 0) ; i++) {
+            res = demo_stepChannel(1<<i);
+        }
+    } while((res == 0) && repeat);
+}
+
+
 // ===============================
 //  Main functions
 // ===============================
@@ -45,8 +127,8 @@ void saveParams(void)
     uint8_t  buf[CfgBlockSize];
     uint8_t *dst = buf;
 
-    for (uint8_t i = 0; i < MAX_CH; i++) {
-        dst += chan[i].pack(dst);
+    for (uint8_t ch = 0; ch < MAX_CH; ch++) {
+        dst += chan[ch].pack(dst);
     }
 
     cfgStore.write(buf);
@@ -60,8 +142,8 @@ void fetchParams(void)
     if (cfgStore.isValid()) {
         cfgStore.read(buf);
 
-        for (uint8_t i = 0; i < MAX_CH; i++) {
-            chan[i].unpack(src);
+        for (uint8_t ch = 0; ch < MAX_CH; ch++) {
+            chan[ch].unpack(src);
             src += Channel::cfgSize;
         }
     } else {
@@ -71,11 +153,11 @@ void fetchParams(void)
 
 void resetParams(void)
 {
-    for (uint8_t i = 0; i < MAX_CH; i++) {
-        chan[i].active     = true;
-        chan[i].internal   = true;
-        chan[i].reverse    = false;
-        chan[i].LEDcorrect = true;
+    for (uint8_t ch = 0; ch < MAX_CH; ch++) {
+        chan[ch].active     = true;
+        chan[ch].internal   = true;
+        chan[ch].reverse    = false;
+        chan[ch].LEDcorrect = true;
     }
     saveParams();
 }
@@ -101,6 +183,8 @@ bool checkParamReset(void)
 #ifdef  USE_I2C
 void onI2Crequest(void) 
 {
+    I2CReqPending = true;
+    
     while(Wire.available()) {
         char c = Wire.read(); // receive byte as a character
         //int x = Wire.read();    // receive byte as an integer
@@ -173,7 +257,7 @@ void loop()
         // (Channel update rate 2ms*4/6 = 8/12ms)
         v  = chan[nc].fetchInVal();
         if (chan[nc].internal) {
-            chan[nc].setPWM(v);
+            chan[nc].setVal(v);
         }
         if (++nc >= MAX_CH) nc = 0;
     }
