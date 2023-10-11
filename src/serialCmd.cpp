@@ -4,7 +4,7 @@
 // @project     NanoPWM
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-27
-// @modifiedby  GiorgioCC - 2023-10-09 17:08
+// @modifiedby  GiorgioCC - 2023-10-11 17:07
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -18,6 +18,8 @@ char    msgBuf[MsgBufLen];
 uint8_t ci = 0;
 bool cmdDone;
 bool cmdErr;
+
+void tryCommand(void);
 
 bool isChannelOK(char c) {
             return (c >= '0' 
@@ -33,6 +35,31 @@ inline void resetCmd(void)
     ci = 0;
 }
 
+void flushCmds(void)
+{
+    delay(100);
+    while(Serial.available()) Serial.read();
+}
+
+void processCmds(unsigned long now)
+{
+    if(!Serial.available()) {
+        if((now - lastCharTS) > MsgTimeout) ci = 0;
+        return;
+    }
+    lastCharTS = now;
+    while(Serial.available()) {
+        char c = (char)Serial.read();
+        if(c == '\n' || c == '\r') continue;
+        if(c == '#') {
+            ci = 0;
+        } else 
+        if(ci < MsgBufLen) {
+            msgBuf[ci++] = c;
+            tryCommand();
+        }
+    }
+}
 
 bool isValidCommand(uint8_t nChars, bool checkCh = true) {
     if(ci != nChars) return false;
@@ -73,6 +100,7 @@ void printHelp(void)
         Serial.println(F("x/X   - Discard changes, revert to last saved configuration"));
         Serial.println(F("F     - Reset all params to factory defaults"));
         Serial.println(F("p/P   - Report current channel setpoint / parameters"));
+        Serial.println(F("Dn/dn - Demo sequence: D/d continuous/one-shot, 0/1 seq/all"));
         Serial.println(F("h/H   - Print command help"));
         Serial.println(F("> DEBUG:"));
         Serial.println(F("ynnn  - Print <nnn> bytes from EEPROM (start from current pos)"));
@@ -120,17 +148,18 @@ void tryCommand(void)
     cmdErr  = false;
 
     switch(cmd) {
-        // case 'v':
+        case 'v':
         case 'V':
         {
             // "Vnbbb" - set brightness of channel #n to value
             if(isValidCommand(5)) {
-                if(!chan[chn].internal) {
+                chan[chn].internal = false;
+                // if(!chan[chn].internal) {
                     uint8_t v = (uint8_t)(msgBuf[4]-'0');
                     v += times10((uint8_t)(msgBuf[3]-'0'));
                     v += times100((uint8_t)(msgBuf[2]-'0'));
                     chan[chn].setVal(v);
-                }
+                // }
                 cmdDone = true;
             }
         }
@@ -201,7 +230,7 @@ void tryCommand(void)
         case '5':
 #endif  
         {
-            if(isValidCommand(5)) {
+            if(isValidCommand(5, false)) {
                 chn = cmd -'0';
                 chan[chn].active        = (msgBuf[1] == 'A');
                 chan[chn].internal      = (msgBuf[2] == 'I');
@@ -209,9 +238,8 @@ void tryCommand(void)
                 chan[chn].LEDcorrect    = (msgBuf[4] == 'C');
                 cmdDone = true;
             }
-
         }
-
+        break;
 
         case 's':
         case 'S':
@@ -268,8 +296,25 @@ void tryCommand(void)
         }
         break;
 
+        case 'd':
+        case 'D':
+        {
+            // "Dn"/"dn"- Demo sequence
+            if(isValidCommand(2,false)) {
+                flushCmds();
+                if(chn == 0) {
+                    demo_stepSeq(cmd == 'D');
+                } else {
+                    demo_stepAll(cmd == 'D');
+                }
+                cmdDone = true;
+            }           
+        }
+        break;
+
         case 'h':
         case 'H':
+        case '?':
         {
             // "h"/"H"- Print command help
             printHelp();
@@ -321,25 +366,5 @@ void tryCommand(void)
         resetCmd();
         Serial.print(cmd);
         Serial.println(cmdErr ? " ERR" : " OK");
-    }
-}
-
-
-void processCmds(unsigned long now)
-{
-    if(!Serial.available()) {
-        if((now - lastCharTS) > MsgTimeout) ci = 0;
-        return;
-    }
-    lastCharTS = now;
-    while(Serial.available()) {
-        char c = (char)Serial.read();
-        if(c == '#') {
-            ci = 0;
-        } else 
-        if(ci < MsgBufLen) {
-            msgBuf[ci++] = c;
-            tryCommand();
-        }
     }
 }

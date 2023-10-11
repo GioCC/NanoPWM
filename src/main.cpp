@@ -5,7 +5,7 @@
 // @details     Pot controlled PWM brightness regulator with serial I/F
 //
 // @author      GiorgioCC (g.crocic@gmail.com) - 2023-08-20
-// @modifiedby  GiorgioCC - 2023-10-09 17:07
+// @modifiedby  GiorgioCC - 2023-10-11 17:04
 //
 // Copyright (c) 2023 GiorgioCC
 // =======================================================================
@@ -50,15 +50,17 @@ volatile bool     I2CReqPending = false;
 //  Returns 0 when finished, or 1 if interrupted by a serial or I2C message
 // (whether valid or not).
 
-constexpr uint8_t RAMP_DLY = 16;
+constexpr uint8_t RAMP_DLY = 4;
 
-static
+//static
 uint8_t demo_stepChannel(uint8_t pattern) 
 {
     uint8_t res = 0;
     uint8_t m   = 0x01;
     uint8_t bakVals[MAX_CH];
 
+    // Expects queue to be flushed at entry.
+    // (Also be mindful of upcoming CR/LF from last/current message)
     if(Serial.available()) return 1;
 #ifdef  USE_I2C
     if(I2CReqPending) return 1;
@@ -100,14 +102,14 @@ uint8_t demo_stepChannel(uint8_t pattern)
     return res;
 }
 
-static
-void demo_stepAll(bool repeat) 
+uint8_t demo_stepAll(bool repeat) 
 {
-    while((demo_stepChannel(0xFF) == 0) && repeat);
+    uint8_t res = 0;
+    while(((res = demo_stepChannel(0xFF)) == 0) && repeat);
+    return res;
 }
 
-static
-void demo_stepSeq(bool repeat) 
+uint8_t demo_stepSeq(bool repeat) 
 {
     uint8_t res = 0;
     do {
@@ -115,6 +117,7 @@ void demo_stepSeq(bool repeat)
             res = demo_stepChannel(1<<i);
         }
     } while((res == 0) && repeat);
+    return res;
 }
 
 
@@ -164,19 +167,56 @@ void resetParams(void)
 
 bool checkParamReset(void)
 {
-    // HW factory reset for jumper at boot on D12 (Nano) / D10 (ProMicro)
+    // HW factory reset for jumper at boot on:
+    // (HW v1.x) D12 (Nano) / D10 (ProMicro)
+    // (HW v2.x) D13 (Nano) / D8  (ProMicro)
     bool    pinVal;
     uint8_t bootPin =
-#ifdef PROMINI // also ProMicro
+#ifdef  HW_V1
+    #ifdef PROMINI // also ProMicro
         10;
-#else
+    #else
         12;
+    #endif
+#else
+    #ifdef PROMINI // also ProMicro
+        13;
+    #else
+        8;
+    #endif
 #endif
     pinMode(bootPin, INPUT_PULLUP);
     delay(10);
     pinVal = !digitalRead(bootPin);
     pinMode(bootPin, INPUT_PULLUP);
     if (pinVal) resetParams();
+    return pinVal;
+}
+
+bool checkDemo(void)
+{
+    // Start demo for jumper at boot on:
+    // (HW v1.x) D13 (Nano) / D14 (ProMicro)
+    // (HW v2.x) D12 (Nano) / D14  (ProMicro)
+    bool    pinVal;
+    uint8_t demoPin =
+#ifdef  HW_V1
+    #ifdef PROMINI // also ProMicro
+        13;
+    #else
+        14;
+    #endif
+#else
+    #ifdef PROMINI // also ProMicro
+        12;
+    #else
+        14;
+    #endif
+#endif
+    pinMode(demoPin, INPUT_PULLUP);
+    delay(10);
+    pinVal = !digitalRead(demoPin);
+    pinMode(demoPin, INPUT_PULLUP);
     return pinVal;
 }
 
@@ -242,6 +282,13 @@ void setup()
 
     cfgStore.init(CfgBlockSize, 128);
     if (!checkParamReset()) fetchParams();
+
+    if(checkDemo()) {
+        do{
+            if(demo_stepSeq(false)) break;
+            if(demo_stepAll(false)) break;
+        } while(1);
+    }
 }
 
 void loop()
